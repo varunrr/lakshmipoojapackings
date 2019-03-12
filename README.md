@@ -1,1 +1,1 @@
-# lakshmipoojapackings
+Code for lakshmi pooja packings
