@@ -203,16 +203,17 @@ h6 {
 #intro .intro-info .btn-get-started,
 #intro .intro-info .btn-services {
   font-family: "Montserrat", sans-serif;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 800;
   letter-spacing: 1px;
   display: inline-block;
   padding: 10px 32px;
   border-radius: 50px;
   transition: 0.5s;
-  margin: 0 20px 20px 0;
+  margin: 10 20px 20px 0;
   color: #fff;
 }
+
 
 #intro .intro-info .btn-get-started {
   background: #007bff;
