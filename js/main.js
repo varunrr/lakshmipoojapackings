@@ -1,123 +1,132 @@
-(function ($) {
+(() => {
   "use strict";
 
-  // Preloader (if the #preloader div exists)
-  $(window).on('load', function () {
-    if ($('#preloader').length) {
-      $('#preloader').delay(100).fadeOut('slow', function () {
-        $(this).remove();
-      });
-    }
+  const header = document.querySelector("[data-header]");
+  const nav = document.querySelector("[data-nav]");
+  const navToggle = document.querySelector("[data-nav-toggle]");
+  const navToggleLabel = navToggle?.querySelector(".sr-only");
+  const quoteForm = document.querySelector("[data-quote-form]");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  document.querySelectorAll("[data-current-year]").forEach((year) => {
+    year.textContent = new Date().getFullYear();
   });
 
-  // Back to top button
-  $(window).scroll(function() {
-    if ($(this).scrollTop() > 100) {
-      $('.back-to-top').fadeIn('slow');
-    } else {
-      $('.back-to-top').fadeOut('slow');
-    }
-  });
-  $('.back-to-top').click(function(){
-    $('html, body').animate({scrollTop : 0},1500, 'easeInOutExpo');
-    return false;
+  const setHeaderState = () => {
+    header?.classList.toggle("is-scrolled", window.scrollY > 18);
+  };
+
+  setHeaderState();
+  window.addEventListener("scroll", setHeaderState, { passive: true });
+
+  const closeMenu = () => {
+    if (!nav || !navToggle) return;
+
+    nav.classList.remove("is-open");
+    navToggle.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("nav-open");
+    if (navToggleLabel) navToggleLabel.textContent = "Open menu";
+  };
+
+  const openMenu = () => {
+    if (!nav || !navToggle) return;
+
+    nav.classList.add("is-open");
+    navToggle.setAttribute("aria-expanded", "true");
+    document.body.classList.add("nav-open");
+    if (navToggleLabel) navToggleLabel.textContent = "Close menu";
+  };
+
+  navToggle?.addEventListener("click", () => {
+    const isOpen = navToggle.getAttribute("aria-expanded") === "true";
+    isOpen ? closeMenu() : openMenu();
   });
 
-  // Initiate the wowjs animation library
-  new WOW().init();
-
-  // Header scroll class
-  $(window).scroll(function() {
-    if ($(this).scrollTop() > 100) {
-      $('#header').addClass('header-scrolled');
-    } else {
-      $('#header').removeClass('header-scrolled');
-    }
+  nav?.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", closeMenu);
   });
 
-  if ($(window).scrollTop() > 100) {
-    $('#header').addClass('header-scrolled');
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenu();
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 900) closeMenu();
+  });
+
+  const revealElements = [...document.querySelectorAll("[data-reveal]")];
+  const initiallyVisible = revealElements.filter((element) => {
+    return element.getBoundingClientRect().top < window.innerHeight * 0.95;
+  });
+
+  initiallyVisible.forEach((element) => element.classList.add("is-visible"));
+  document.documentElement.classList.add("reveal-ready");
+
+  if ("IntersectionObserver" in window && !reduceMotion.matches) {
+    const revealObserver = new IntersectionObserver(
+      (entries, observer) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
+      },
+      { rootMargin: "0px 0px -8%", threshold: 0.12 }
+    );
+
+    revealElements
+      .filter((element) => !element.classList.contains("is-visible"))
+      .forEach((element) => revealObserver.observe(element));
+  } else {
+    revealElements.forEach((element) => element.classList.add("is-visible"));
   }
 
-  // Smooth scroll for the navigation and links with .scrollto classes
-  $('.main-nav a, .mobile-nav a, .scrollto').on('click', function() {
-    if (location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') && location.hostname == this.hostname) {
-      var target = $(this.hash);
-      if (target.length) {
-        var top_space = 0;
+  const sectionLinks = [...document.querySelectorAll('.primary-nav a[href^="#"]')]
+    .filter((link) => link.getAttribute("href") !== "#quote");
+  const linkedSections = sectionLinks
+    .map((link) => document.querySelector(link.getAttribute("href")))
+    .filter(Boolean);
 
-        if ($('#header').length) {
-          top_space = $('#header').outerHeight();
+  if ("IntersectionObserver" in window && linkedSections.length) {
+    const sectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          sectionLinks.forEach((link) => {
+            link.classList.toggle(
+              "is-active",
+              link.getAttribute("href") === `#${entry.target.id}`
+            );
+          });
+        });
+      },
+      { rootMargin: "-28% 0px -64%", threshold: 0 }
+    );
 
-          if (! $('#header').hasClass('header-scrolled')) {
-            top_space = top_space - 20;
-          }
-        }
+    linkedSections.forEach((section) => sectionObserver.observe(section));
+  }
 
-        $('html, body').animate({
-          scrollTop: target.offset().top - top_space
-        }, 1500, 'easeInOutExpo');
+  quoteForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
 
-        if ($(this).parents('.main-nav, .mobile-nav').length) {
-          $('.main-nav .active, .mobile-nav .active').removeClass('active');
-          $(this).closest('li').addClass('active');
-        }
+    if (!quoteForm.reportValidity()) return;
 
-        if ($('body').hasClass('mobile-nav-active')) {
-          $('body').removeClass('mobile-nav-active');
-          $('.mobile-nav-toggle i').toggleClass('fa-times fa-bars');
-          $('.mobile-nav-overly').fadeOut();
-        }
-        return false;
-      }
-    }
+    const formData = new FormData(quoteForm);
+    const name = String(formData.get("name") || "").trim();
+    const phone = String(formData.get("phone") || "").trim();
+    const requirement = String(formData.get("requirement") || "").trim();
+    const details = String(formData.get("details") || "").trim();
+    const message = [
+      "Hello Lakshmi Pooja Packings, I'd like a quote.",
+      "",
+      `Name: ${name}`,
+      `Phone: ${phone}`,
+      `Requirement: ${requirement}`,
+      details ? `Details: ${details}` : "Details: To be discussed"
+    ].join("\n");
+    const whatsappUrl = `https://wa.me/919791765445?text=${encodeURIComponent(message)}`;
+    const enquiryWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+
+    if (!enquiryWindow) window.location.href = whatsappUrl;
   });
-
-  // Navigation active state on scroll
-  var nav_sections = $('section');
-  var main_nav = $('.main-nav, .mobile-nav');
-  var main_nav_height = $('#header').outerHeight();
-
-  $(window).on('scroll', function () {
-    var cur_pos = $(this).scrollTop();
-  
-    nav_sections.each(function() {
-      var top = $(this).offset().top - main_nav_height,
-          bottom = top + $(this).outerHeight();
-  
-      if (cur_pos >= top && cur_pos <= bottom) {
-        main_nav.find('li').removeClass('active');
-        main_nav.find('a[href="#'+$(this).attr('id')+'"]').parent('li').addClass('active');
-      }
-    });
-  });
-
-  // jQuery counterUp (used in Whu Us section)
-  $('[data-toggle="counter-up"]').counterUp({
-    delay: 10,
-    time: 1000
-  });
-
-  // Porfolio isotope and filter
-  $(window).on('load', function () {
-    var portfolioIsotope = $('.portfolio-container').isotope({
-      itemSelector: '.portfolio-item'
-    });
-    $('#portfolio-flters li').on( 'click', function() {
-      $("#portfolio-flters li").removeClass('filter-active');
-      $(this).addClass('filter-active');
-  
-      portfolioIsotope.isotope({ filter: $(this).data('filter') });
-    });
-  });
-
-  // Testimonials carousel (uses the Owl Carousel library)
-  $(".testimonials-carousel").owlCarousel({
-    autoplay: true,
-    dots: true,
-    loop: true,
-    items: 1
-  });
-
-})(jQuery);
-
+})();
